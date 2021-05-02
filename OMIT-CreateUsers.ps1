@@ -122,6 +122,13 @@ function Set-OU
 
     return $ou
 }
+function IsUserNameValid
+{
+    #Take in parameter $initials
+    #Check if the samaccountname already exists
+    #IF it exists modify it in some way
+    #Get-ADUser -F {SamAccountName -eq $Username}
+}
 <#
 SingleUser function
 Creates a singular user with input from end user
@@ -131,19 +138,34 @@ function singleUser
     $title = $defaultTitle + " - " + "Single user creation"
     Clear-Host
     Write-Host "================ $title ================"
+
     $fullname = Read-Host "Insert Full name"
     $fullnameSplit = $fullname.Split()
 
     $firstname = (Get-Culture).TextInfo.ToTitleCase($fullnameSplit[0]) # -Name + -GivenName
     $surname = (Get-Culture).TextInfo.ToTitleCase($fullnameSplit[1]) # -Surname
+
     $initials = $firstname.Substring(0,2) + $surname.Substring(0,2)
     $initials = $initials.ToLower() # -SamAccountName
-    $email = $initials + $defaultEmailDomain # -UserPrincipalName
+
+    $email = $initials + "@" + $defaultEmailDomain # -UserPrincipalName
+
     Get-OUs
     $ou = Set-OU
     $path = "OU="+$ou+","+$defaultDomainController # -Path
-    $password = get-RandomPassword | ConvertTo-SecureString -AsPlainText -Force # -AccountPassword
-    New-ADUser -Name $firstname -Surname $surname -GivenName $firstname -SamAccountName $initials -UserPrincipalName $email -AccountPassword $password -path $path -Enabled $true
+    $password = get-RandomPassword
+    $password_secured = ConvertTo-SecureString($password) -AsPlainText -Force # -AccountPassword
+
+    <#
+    If IsUserNameValid == true -> Create user
+    Else
+    
+    #>
+
+    New-ADUser -Name $firstname -Surname $surname -GivenName $firstname -SamAccountName $initials -UserPrincipalName $email -AccountPassword $password_secured -path $path -Enabled $true
+    Write-Host -ForegroundColor red "$fullname has been created"
+    Write-Host -ForegroundColor red "Username: $initials"
+    Write-Host -ForegroundColor red "Password: $password"
 }
 
 function multipleUsers
@@ -151,16 +173,94 @@ function multipleUsers
     $title = $defaultTitle + " - " + "Multiple user creation"
     Clear-Host
     Write-Host "================ $title ================"
-    Get-OUs
-    $ou = Set-OU
-    $path = "OU="+$ou+","+$defaultDomainController
-    write-host $path
+
+    $hash_table = $null
+    $hash_table = @{}
+    $amount = Read-Host "How many users do you wish to create?"
+    $count = 1..$amount
+    foreach ($i in $count)
+    {
+        $fullname = Read-Host "Insert Full name"
+        $fullnameSplit = $fullname.Split()
+
+        $firstname = (Get-Culture).TextInfo.ToTitleCase($fullnameSplit[0]) # -Name + -GivenName
+        $surname = (Get-Culture).TextInfo.ToTitleCase($fullnameSplit[1]) # -Surname
+
+        $initials = $firstname.Substring(0,2) + $surname.Substring(0,2)
+        $initials = $initials.ToLower() # -SamAccountName
+
+        $email = $initials + "@" + $defaultEmailDomain # -UserPrincipalName
+
+        Get-OUs
+        $ou = Set-OU
+        $path = "OU="+$ou+","+$defaultDomainController # -Path
+        $password = get-RandomPassword
+        $password_secured = ConvertTo-SecureString($password) -AsPlainText -Force # -AccountPassword
+
+        <#
+        If IsUserNameValid == true -> Create user
+        Else
+        
+        #>
+
+        New-ADUser -Name $firstname -Surname $surname -GivenName $firstname -SamAccountName $initials -UserPrincipalName $email -AccountPassword $password_secured -path $path -Enabled $true
+        $hash_table.add($initials,$password)
+    }
+
+    $results = $hash_table.GetEnumerator() |
+        ForEach-Object {
+            [PSCustomObject]@{
+                Username = $_.Key
+                Password = $_.Value
+            }
+        }
+
+    $results
 }
 function usersCSV
 {
     $title = $defaultTitle + " - " + "CSV user creation"
     Clear-Host
     Write-Host "================ $title ================"
+    write-warning "The full path is needed - Example: C:\Users\Documents\users.csv"
+    $csvfile = Read-Host "Insert full path to CSV file" | Import-Csv
+
+    foreach ($user in $csvfile)
+    {
+        $fullname =  $user.fullname
+
+        $fullnameSplit = $fullname.Split()
+
+        $firstname = (Get-Culture).TextInfo.ToTitleCase($fullnameSplit[0]) # -Name + -GivenName
+        $surname = (Get-Culture).TextInfo.ToTitleCase($fullnameSplit[1]) # -Surname
+
+        $initials = $firstname.Substring(0,2) + $surname.Substring(0,2)
+        $initials = $initials.ToLower() # -SamAccountName
+
+        $email = $initials + "@" + $defaultEmailDomain # -UserPrincipalName
+
+        $ou = $user.department
+        $path = "OU="+$ou+","+$defaultDomainController # -Path
+        $password = get-RandomPassword
+        $password_secured = ConvertTo-SecureString($password) -AsPlainText -Force # -AccountPassword
+
+        New-ADUser -Name $firstname -Surname $surname -GivenName $firstname -SamAccountName $initials -UserPrincipalName $email -AccountPassword $password_secured -path $path -Enabled $true
+        $hash_table.add($initials,$password)
+
+        $results = $hash_table.GetEnumerator() |
+            ForEach-Object {
+                [PSCustomObject]@{
+                    Username = $_.Key
+                    Password = $_.Value
+                }
+            }
+        
+        $results
+
+        #Check if OU exist
+        #Check if user already exists
+    }
+
 }
 
 function updateUser
@@ -168,6 +268,13 @@ function updateUser
     $title = $defaultTitle + " - " + "Update already exisiting user"
     Clear-Host
     Write-Host "================ $title ================"
+
+    $csvfile = Read-Host "Insert full path to CSV file" | Import-Csv
+    foreach ($user in $csvfile)
+    {
+        $fullname =  $user.fullname
+        Write-Host $fullname
+    }
 }
 
 <#
