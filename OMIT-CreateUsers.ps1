@@ -162,7 +162,7 @@ function singleUser
     
     #>
 
-    New-ADUser -Name $firstname -Surname $surname -GivenName $firstname -SamAccountName $initials -UserPrincipalName $email -AccountPassword $password_secured -path $path -Enabled $true
+    New-ADUser -GivenName $firstname -Surname $surname -Name $initials  -SamAccountName $initials -UserPrincipalName $email -AccountPassword $password_secured -path $path -Enabled $true
     Write-Host -ForegroundColor red "$fullname has been created"
     Write-Host -ForegroundColor red "Username: $initials"
     Write-Host -ForegroundColor red "Password: $password"
@@ -203,7 +203,7 @@ function multipleUsers
         
         #>
 
-        New-ADUser -Name $firstname -Surname $surname -GivenName $firstname -SamAccountName $initials -UserPrincipalName $email -AccountPassword $password_secured -path $path -Enabled $true
+        New-ADUser -GivenName $firstname -Surname $surname -Name $initials  -SamAccountName $initials -UserPrincipalName $email -AccountPassword $password_secured -path $path -Enabled $true
         $hash_table.add($initials,$password)
     }
 
@@ -244,7 +244,7 @@ function usersCSV
         $password = get-RandomPassword
         $password_secured = ConvertTo-SecureString($password) -AsPlainText -Force # -AccountPassword
 
-        New-ADUser -Name $firstname -Surname $surname -GivenName $firstname -SamAccountName $initials -UserPrincipalName $email -AccountPassword $password_secured -path $path -Enabled $true
+        New-ADUser -GivenName $firstname -Surname $surname -Name $initials  -SamAccountName $initials -UserPrincipalName $email -AccountPassword $password_secured -path $path -Enabled $true
         $hash_table.add($initials,$password)
 
         $results = $hash_table.GetEnumerator() |
