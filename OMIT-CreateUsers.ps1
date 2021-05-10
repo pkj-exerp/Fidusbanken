@@ -18,6 +18,8 @@ function showMenu
     Write-Host "2: Press '2' to create multiple users."
     Write-Host "3: Press '3' to create users from CSV."
     Write-Host "4: Press '4' to update a already exisiting user."
+    Write-Host "5: Press '5' to activate a user."
+    Write-Host "6: Press '6' to deactivate a user."
     Write-Host "Q: Press 'Q' to quit."
 }
 <#
@@ -46,6 +48,16 @@ function selection
         '4' 
         {
             updateUser
+        }
+
+        '5' 
+        {
+            activateUser
+        }
+
+        '6' 
+        {
+            deactivateUser
         }
 
         'q' 
@@ -264,6 +276,34 @@ function usersCSV
 }
 
 function updateUser
+{
+    $title = $defaultTitle + " - " + "Update already exisiting user"
+    Clear-Host
+    Write-Host "================ $title ================"
+
+    $csvfile = Read-Host "Insert full path to CSV file" | Import-Csv
+    foreach ($user in $csvfile)
+    {
+        $fullname =  $user.fullname
+        Write-Host $fullname
+    }
+}
+
+function activateUser
+{
+    $title = $defaultTitle + " - " + "Update already exisiting user"
+    Clear-Host
+    Write-Host "================ $title ================"
+
+    $csvfile = Read-Host "Insert full path to CSV file" | Import-Csv
+    foreach ($user in $csvfile)
+    {
+        $fullname =  $user.fullname
+        Write-Host $fullname
+    }
+}
+
+function deactivateUser
 {
     $title = $defaultTitle + " - " + "Update already exisiting user"
     Clear-Host
