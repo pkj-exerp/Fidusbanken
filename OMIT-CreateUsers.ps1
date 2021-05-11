@@ -134,12 +134,63 @@ function Set-OU
 
     return $ou
 }
-function IsUserNameValid
+<#
+IsUserNameValid function
+Takes in parameter initials and checks if the samaccountname exists
+If the username exists it will call the function updateSamAccountName
+#>
+function IsSamAccountNameValid($initials)
 {
-    #Take in parameter $initials
-    #Check if the samaccountname already exists
-    #IF it exists modify it in some way
-    #Get-ADUser -F {SamAccountName -eq $Username}
+    if (!(Get-ADUser -Filter "SamAccountName -eq '$($initials)'"))
+    {
+        #User doesn't exists
+        write-host "User doesn't exist" $initials
+        return $initials
+    }
+    else 
+    {
+        #User exists
+        write-host "User exists" $initials
+        updateSamAccountName($initials)
+    }
+}
+<#
+updateSamAccountName function
+Adds a number to the username
+IF that username also exists it will increase the number until it doesn't exist anymore
+#>
+function updateSamAccountName($initials)
+{
+    $isvalid = $false
+    $number = 1
+    do
+    {
+        if (!(Get-ADUser -Filter "SamAccountName -eq '$($initials)'"))
+        {
+            #User doesn't exists
+            write-host "User is now valid " $initials
+            $isvalid = $true
+            IsSamAccountNameValid($initials)
+        }
+        else 
+        {
+            if ($initials -match ".*\d+.*")
+            {
+                $initials = $initials -split '(?<=\D)(?=\d)'
+                $number = $initials[1] -as [int]
+                $number++
+                $initials = $initials[0]+$number
+                write-host "split: " $initials
+            }
+            else 
+            {
+                write-host "Dosen't contain number " $initials
+                $initials = $initials+$number
+            }
+            Write-Host "In update function" $initials
+        }
+    }
+    while(!$isvalid)
 }
 <#
 SingleUser function
@@ -157,8 +208,12 @@ function singleUser
     $firstname = (Get-Culture).TextInfo.ToTitleCase($fullnameSplit[0]) # -Name + -GivenName
     $surname = (Get-Culture).TextInfo.ToTitleCase($fullnameSplit[1]) # -Surname
 
+    
+    #>
     $initials = $firstname.Substring(0,2) + $surname.Substring(0,2)
     $initials = $initials.ToLower() # -SamAccountName
+
+    $initials = IsSamAccountNameValid($initials)
 
     $email = $initials + "@" + $defaultEmailDomain # -UserPrincipalName
 
@@ -168,11 +223,6 @@ function singleUser
     $password = get-RandomPassword
     $password_secured = ConvertTo-SecureString($password) -AsPlainText -Force # -AccountPassword
 
-    <#
-    If IsUserNameValid == true -> Create user
-    Else
-    
-    #>
 
     New-ADUser -GivenName $firstname -Surname $surname -Name $initials  -SamAccountName $initials -UserPrincipalName $email -AccountPassword $password_secured -path $path -Enabled $true
     Write-Host -ForegroundColor red "$fullname has been created"
@@ -201,6 +251,8 @@ function multipleUsers
         $initials = $firstname.Substring(0,2) + $surname.Substring(0,2)
         $initials = $initials.ToLower() # -SamAccountName
 
+        $initials = IsSamAccountNameValid($initials)
+
         $email = $initials + "@" + $defaultEmailDomain # -UserPrincipalName
 
         Get-OUs
@@ -208,12 +260,6 @@ function multipleUsers
         $path = "OU="+$ou+","+$defaultDomainController # -Path
         $password = get-RandomPassword
         $password_secured = ConvertTo-SecureString($password) -AsPlainText -Force # -AccountPassword
-
-        <#
-        If IsUserNameValid == true -> Create user
-        Else
-        
-        #>
 
         New-ADUser -GivenName $firstname -Surname $surname -Name $initials  -SamAccountName $initials -UserPrincipalName $email -AccountPassword $password_secured -path $path -Enabled $true
         $hash_table.add($initials,$password)
@@ -249,6 +295,8 @@ function usersCSV
         $initials = $firstname.Substring(0,2) + $surname.Substring(0,2)
         $initials = $initials.ToLower() # -SamAccountName
 
+        $initials = IsSamAccountNameValid($initials)
+
         $email = $initials + "@" + $defaultEmailDomain # -UserPrincipalName
 
         $ou = $user.department
@@ -270,7 +318,6 @@ function usersCSV
         $results
 
         #Check if OU exist
-        #Check if user already exists
     }
 
 }
@@ -295,12 +342,11 @@ function activateUser
     Clear-Host
     Write-Host "================ $title ================"
 
-    $csvfile = Read-Host "Insert full path to CSV file" | Import-Csv
-    foreach ($user in $csvfile)
-    {
-        $fullname =  $user.fullname
-        Write-Host $fullname
-    }
+    $initials = "pako"
+
+    $initials = IsSamAccountNameValid($initials)
+
+    write-host "Down here" $initials
 }
 
 function deactivateUser
