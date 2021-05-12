@@ -72,6 +72,34 @@ function selection
         }
     }
 }
+function selectionTryAgain($tryagain)
+{
+    switch ($selectionTryAgain)
+    {
+        'y' 
+        {
+            if ($tryagain -eq "active")
+            {
+                activateUser
+            }
+            else
+            {
+                deactivateUser
+            }
+        }
+
+        'q' 
+        {
+            return
+        }
+        default
+        {
+            Write-Warning -Message "Invalid option, try again"
+            $selectionTryAgain = Read-Host $defaultSelectionMsg
+            selectionTryAgain
+        }
+    }
+}
 <#
 Get-RandomPassword
 Creates a random password with 3 of each characters
@@ -208,8 +236,6 @@ function singleUser
     $firstname = (Get-Culture).TextInfo.ToTitleCase($fullnameSplit[0]) # -Name + -GivenName
     $surname = (Get-Culture).TextInfo.ToTitleCase($fullnameSplit[1]) # -Surname
 
-    
-    #>
     $initials = $firstname.Substring(0,2) + $surname.Substring(0,2)
     $initials = $initials.ToLower() # -SamAccountName
 
@@ -335,31 +361,52 @@ function updateUser
         Write-Host $fullname
     }
 }
-
+<#
+activateUser function
+activates the user in the AD specified with the SamAccountName
+#>
 function activateUser
 {
-    $title = $defaultTitle + " - " + "Update already exisiting user"
+    $title = $defaultTitle + " - " + "Activate user."
     Clear-Host
     Write-Host "================ $title ================"
 
-    $initials = "pako"
+    $initials = Read-Host "Insert initials for the user to activate"
 
-    $initials = IsSamAccountNameValid($initials)
-
-    write-host "Down here" $initials
+    try
+    {
+        Set-ADUser -Identity $initials -Enabled $true
+    }
+    catch 
+    {
+        Write-Host "User --- $initials --- does not exist, do you wanna try again?"
+        $selectionTryAgain = Read-Host "Press 'y' to try again, press 'q' to quit."
+        $tryagain = "activate"
+        selectionTryAgain($tryagain)
+    }
 }
-
+<#
+deactivateUser function
+activates the user in the AD specified with the SamAccountName
+#>
 function deactivateUser
 {
-    $title = $defaultTitle + " - " + "Update already exisiting user"
+    $title = $defaultTitle + " - " + "Deactivate user."
     Clear-Host
     Write-Host "================ $title ================"
 
-    $csvfile = Read-Host "Insert full path to CSV file" | Import-Csv
-    foreach ($user in $csvfile)
+    $initials = Read-Host "Insert initials for the user to deactivate"
+
+    try
     {
-        $fullname =  $user.fullname
-        Write-Host $fullname
+        Set-ADUser -Identity $initials -Enabled $false
+    }
+    catch 
+    {
+        Write-Host "User --- $initials --- does not exist, do you wanna try again?"
+        $selectionTryAgain = Read-Host "Press 'y' to try again, press 'q' to quit."
+        $tryagain = "deactivate"
+        selectionTryAgain($tryagain)
     }
 }
 
