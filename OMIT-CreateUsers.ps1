@@ -60,14 +60,73 @@ function selection
             deactivateUser
         }
 
+        't'
+        {
+            test
+        }
+
         'q' 
         {
             return
         }
+
         default
         {
             Write-Warning -Message "Invalid option, try again"
             $selectionMenu = Read-Host $defaultSelectionMsg
+            selection
+        }
+    }
+}
+function showMenuUpdateUser($initials)
+{
+    $title = $defaultTitle + " - " + "update for $initials"
+    Clear-Host
+    Write-Host "================ $title ================"
+    
+    Write-Host "1: Press '1' to update username."
+    Write-Host "2: Press '2' to update password."
+    Write-Host "3: Press '3' to update department."
+    Write-Host "4: Press '4' to update fullname"
+    Write-Host "Q: Press 'Q' to quit."
+}
+<#
+selection
+Creates the selection menu
+#>
+function selectionUpdateUser($initials)
+{
+    switch ($selectionMenuUpdateUser)
+    {
+        '1' 
+        {
+            updateUserUsername($initials)
+        }
+
+        '2'
+        {
+            updateUserPassword($initials)
+        }
+
+        '3' 
+        {
+            updateUserDepartment($initials)
+        }
+
+        '4' 
+        {
+            updateUserFullname($initials)
+        }
+
+        'q' 
+        {
+            return
+        }
+
+        default
+        {
+            Write-Warning -Message "Invalid option, try again"
+            $selectionMenuUpdateUser = Read-Host $defaultSelectionMsg
             selection
         }
     }
@@ -82,9 +141,13 @@ function selectionTryAgain($tryagain)
             {
                 activateUser
             }
-            else
+            elseif ($tryagain -eq "deactive")
             {
                 deactivateUser
+            }
+            elseif ($tryagain -eq "updateUser")
+            {
+                updateUser
             }
         }
 
@@ -96,7 +159,7 @@ function selectionTryAgain($tryagain)
         {
             Write-Warning -Message "Invalid option, try again"
             $selectionTryAgain = Read-Host $defaultSelectionMsg
-            selectionTryAgain
+            selectionTryAgain($tryagain)
         }
     }
 }
@@ -163,7 +226,7 @@ function Set-OU
     return $ou
 }
 <#
-IsUserNameValid function
+IsSamAccountNameValid function
 Takes in parameter initials and checks if the samaccountname exists
 If the username exists it will call the function updateSamAccountName
 #>
@@ -172,14 +235,38 @@ function IsSamAccountNameValid($initials)
     if (!(Get-ADUser -Filter "SamAccountName -eq '$($initials)'"))
     {
         #User doesn't exists
-        write-host "User doesn't exist" $initials
+        #write-host "User doesn't exist - $initials"
         return $initials
     }
     else 
     {
+        #write-host "user exists - $initials"
         #User exists
-        write-host "User exists" $initials
+        #write-host "User exists" $initials
         updateSamAccountName($initials)
+    }
+}
+<#
+IsSamAccountNameValidUpdateUser function
+Takes in parameter initials and checks if the samaccountname exists
+If the username exists it will call the function updateSamAccountName
+#>
+function IsSamAccountNameValidUpdateUser($initials)
+{
+    $valid = $false
+    if (!(Get-ADUser -Filter "SamAccountName -eq '$($initials)'"))
+    {
+        #User doesn't exists
+        #write-host "User doesn't exist - $initials"
+        return $valid
+    }
+    else 
+    {
+        #write-host "user exists - $initials"
+        #User exists
+        #write-host "User exists" $initials
+        $valid = $true
+        return $valid
     }
 }
 <#
@@ -196,7 +283,7 @@ function updateSamAccountName($initials)
         if (!(Get-ADUser -Filter "SamAccountName -eq '$($initials)'"))
         {
             #User doesn't exists
-            write-host "User is now valid " $initials
+            #write-host "User is now valid " $initials
             $isvalid = $true
             IsSamAccountNameValid($initials)
         }
@@ -208,17 +295,38 @@ function updateSamAccountName($initials)
                 $number = $initials[1] -as [int]
                 $number++
                 $initials = $initials[0]+$number
-                write-host "split: " $initials
+                #write-host "split: " $initials
             }
             else 
             {
-                write-host "Dosen't contain number " $initials
+                #write-host "Dosen't contain number " $initials
                 $initials = $initials+$number
             }
-            Write-Host "In update function" $initials
+            #Write-Host "In update function" $initials
         }
     }
     while(!$isvalid)
+}
+<#
+IsOUVaid function
+Checks if the OU exists
+#>
+function IsOUValid($ou)
+{
+    $ouExist = $false
+    try 
+    {
+        Get-ADOrganizationalUnit -Identity $ou | Out-Null
+        #Write-Host "OU exists - $ou"
+        $ouExist = $true
+    }
+    catch [Microsoft.ActiveDirectory.Management.ADIdentityNotFoundException] 
+    {
+        #write-host "Ou DOESN'T exist - $ou"
+        $ouExist = $false
+    }
+
+    return $ouExist
 }
 <#
 SingleUser function
@@ -233,7 +341,7 @@ function singleUser
     $fullname = Read-Host "Insert Full name"
     $fullnameSplit = $fullname.Split()
 
-    $firstname = (Get-Culture).TextInfo.ToTitleCase($fullnameSplit[0]) # -Name + -GivenName
+    $firstname = (Get-Culture).TextInfo.ToTitleCase($fullnameSplit[0]) # -GivenName
     $surname = (Get-Culture).TextInfo.ToTitleCase($fullnameSplit[1]) # -Surname
 
     $initials = $firstname.Substring(0,2) + $surname.Substring(0,2)
@@ -271,7 +379,7 @@ function multipleUsers
         $fullname = Read-Host "Insert Full name"
         $fullnameSplit = $fullname.Split()
 
-        $firstname = (Get-Culture).TextInfo.ToTitleCase($fullnameSplit[0]) # -Name + -GivenName
+        $firstname = (Get-Culture).TextInfo.ToTitleCase($fullnameSplit[0]) # -GivenName
         $surname = (Get-Culture).TextInfo.ToTitleCase($fullnameSplit[1]) # -Surname
 
         $initials = $firstname.Substring(0,2) + $surname.Substring(0,2)
@@ -308,6 +416,8 @@ function usersCSV
     Write-Host "================ $title ================"
     write-warning "The full path is needed - Example: C:\Users\Documents\users.csv"
     $csvfile = Read-Host "Insert full path to CSV file" | Import-Csv
+    $hash_table = $null
+    $hash_table = @{}
 
     foreach ($user in $csvfile)
     {
@@ -315,7 +425,7 @@ function usersCSV
 
         $fullnameSplit = $fullname.Split()
 
-        $firstname = (Get-Culture).TextInfo.ToTitleCase($fullnameSplit[0]) # -Name + -GivenName
+        $firstname = (Get-Culture).TextInfo.ToTitleCase($fullnameSplit[0]) # -GivenName
         $surname = (Get-Culture).TextInfo.ToTitleCase($fullnameSplit[1]) # -Surname
 
         $initials = $firstname.Substring(0,2) + $surname.Substring(0,2)
@@ -330,8 +440,16 @@ function usersCSV
         $password = get-RandomPassword
         $password_secured = ConvertTo-SecureString($password) -AsPlainText -Force # -AccountPassword
 
-        New-ADUser -GivenName $firstname -Surname $surname -Name $initials  -SamAccountName $initials -UserPrincipalName $email -AccountPassword $password_secured -path $path -Enabled $true
-        $hash_table.add($initials,$password)
+        if (IsOUValid($path))
+        {
+            New-ADUser -GivenName $firstname -Surname $surname -Name $initials  -SamAccountName $initials -UserPrincipalName $email -AccountPassword $password_secured -path $path -Enabled $true
+            $hash_table.add($initials,$password)
+        }
+        else 
+        {
+            Write-Warning "The OU does not exist for $initials"
+            Write-Warning "$initials will not be created!"
+        }
 
         $results = $hash_table.GetEnumerator() |
             ForEach-Object {
@@ -341,26 +459,97 @@ function usersCSV
                 }
             }
         
-        $results
-
-        #Check if OU exist
     }
-
+    $results
 }
-
+<#
+updateUser function
+Creates menu to ask what the user needs to get updated
+#>
 function updateUser
 {
     $title = $defaultTitle + " - " + "Update already exisiting user"
     Clear-Host
     Write-Host "================ $title ================"
 
-    $csvfile = Read-Host "Insert full path to CSV file" | Import-Csv
-    foreach ($user in $csvfile)
+    $initials = Read-Host "Insert initials for the user to update"
+    $check = $true
+
+    if(IsSamAccountNameValidUpdateUser($initials))
     {
-        $fullname =  $user.fullname
-        Write-Host $fullname
+        showMenuUpdateUser($initials)
+        $selectionMenuUpdateUser = Read-Host $defaultSelectionMsg
+        selectionUpdateUser($initials)
+    }
+    else
+    {
+        Write-Host "User --- $initials --- does not exist, do you wanna try again?"
+        $selectionTryAgain = Read-Host "Press 'y' to try again, press 'q' to quit."
+        $tryagain = "updateUser"
+        selectionTryAgain($tryagain)
     }
 }
+<#
+updateUserUsername function
+Updates the SamAccountName and the email
+#>
+function updateUserUsername($initials)
+{
+    $newInitials = Read-Host "Insert the new initials for $initials"
+    $email = $newInitials + "@" + $defaultEmailDomain
+    try
+    {
+        Set-ADUser $initials -Replace @{UserPrincipalName="$email"}
+        Set-ADUser $initials -Replace @{samaccountname="$newInitials"}
+    }
+    catch 
+    {
+        Write-Warning "FAILED - The inserted username already exists"
+    }
+}
+
+<#
+updateUserPassword function
+Updates the Password
+#>
+function updateUserPassword($initials)
+{
+    $password = get-RandomPassword
+    $password_secured = ConvertTo-SecureString($password) -AsPlainText -Force # -AccountPassword
+
+    Set-ADAccountPassword -Identity $initials -Reset -NewPassword $password_secured
+    Write-Host "New password for $initials has been set!"
+    Write-Host "Password: $password"
+}
+
+<#
+updateUserDepartment function
+Updates the Department/OU
+#>
+function updateUserDepartment($initials)
+{
+    Get-OUs
+    $ou = Set-OU
+    $path = "OU="+$ou+","+$defaultDomainController # -Path
+    Get-ADUser $initials | Move-ADObject -TargetPath $path
+}
+
+<#
+updateUserFullname function
+Updates the Fullname
+#>
+function updateUserFullname($initials)
+{
+    $fullname = Read-Host "Insert Full name"
+    $fullnameSplit = $fullname.Split()
+
+    $firstname = (Get-Culture).TextInfo.ToTitleCase($fullnameSplit[0]) # -GivenName
+    $surname = (Get-Culture).TextInfo.ToTitleCase($fullnameSplit[1]) # -Surname
+
+    Set-ADUser -Identity $initials -GivenName $firstname
+    Set-ADUser -Identity $initials -Surname $surname
+}
+
 <#
 activateUser function
 activates the user in the AD specified with the SamAccountName
@@ -408,6 +597,17 @@ function deactivateUser
         $tryagain = "deactivate"
         selectionTryAgain($tryagain)
     }
+}
+
+function test
+{
+    $title = $defaultTitle + " - " + "test."
+    Clear-Host
+    Write-Host "================ $title ================"
+
+    $ou = "OU=Test,DC=omit,DC=localhost"
+
+    IsOUValid($ou)
 }
 
 <#
