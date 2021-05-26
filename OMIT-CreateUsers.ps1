@@ -2,7 +2,7 @@
 $defaultTitle = "Fidusbanken user management"
 $defaultSelectionMsg = "Please make a selection"
 $defaultEmailDomain = "fidusbanken.dk"
-$defaultDomainController = "DC=omit,DC=localhost"
+$defaultDomainController = "DC=Oddermose-IT,DC=localhost"
 
 <#
 showMenu
